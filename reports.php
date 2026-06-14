@@ -98,9 +98,9 @@ if ($selected_quiz) {
     $hard_questions = $stmt->get_result();
     $stmt->close();
 
-    /* תלמידים שצריכים חיזוק */
+    /* תלמידים שצריכים חיזוק - success_rate < 0.35 */
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             u.first_name,
             u.last_name,
             qr.wrong_count
@@ -108,7 +108,9 @@ if ($selected_quiz) {
         JOIN quiz_assignments qa ON qr.assignment_id = qa.id
         JOIN users u ON qa.student_id = u.id
         WHERE qa.quiz_id = ?
-        ORDER BY qr.wrong_count DESC, u.first_name ASC
+          AND qr.total_questions > 0
+          AND (qr.correct_count * 1.0 / qr.total_questions) < 0.50
+        ORDER BY (qr.correct_count * 1.0 / qr.total_questions) ASC, u.first_name ASC
         LIMIT 5
     ");
     $stmt->bind_param("i", $selected_quiz_id);
@@ -116,9 +118,9 @@ if ($selected_quiz) {
     $students_need_help = $stmt->get_result();
     $stmt->close();
 
-    /* תלמידים מצטיינים */
+    /* תלמידים מצטיינים - success_rate >= 0.85 */
     $stmt = $conn->prepare("
-        SELECT 
+        SELECT
             u.first_name,
             u.last_name,
             qr.correct_count
@@ -126,7 +128,9 @@ if ($selected_quiz) {
         JOIN quiz_assignments qa ON qr.assignment_id = qa.id
         JOIN users u ON qa.student_id = u.id
         WHERE qa.quiz_id = ?
-        ORDER BY qr.correct_count DESC, u.first_name ASC
+          AND qr.total_questions > 0
+          AND (qr.correct_count * 1.0 / qr.total_questions) >= 0.85
+        ORDER BY (qr.correct_count * 1.0 / qr.total_questions) DESC, u.first_name ASC
         LIMIT 5
     ");
     $stmt->bind_param("i", $selected_quiz_id);
